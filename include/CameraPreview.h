@@ -29,7 +29,7 @@
 class CAMERA_API CameraWindow
 {
 public:
-    CameraWindow(int width, int height, const std::string &title);
+    CameraWindow(int width, int height, const char *title);
     ~CameraWindow();
 
     bool Create();
@@ -48,7 +48,7 @@ public:
 private:
     int width;
     int height;
-    std::string title;
+    char *title;
 
 #ifdef _WIN32
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
