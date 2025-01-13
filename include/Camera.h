@@ -43,50 +43,6 @@ struct Buffer
 };
 #endif
 
-unsigned char clamp(double value, double min, double max)
-{
-    if (value < min)
-        return static_cast<unsigned char>(min);
-    if (value > max)
-        return static_cast<unsigned char>(max);
-    return static_cast<unsigned char>(value);
-}
-
-void ConvertYUY2ToRGB(const unsigned char *yuy2Data, unsigned char *rgbData, int width, int height)
-{
-    int rgbIndex = 0;
-    for (int i = 0; i < width * height * 2; i += 4)
-    {
-        // Extract YUV values
-        unsigned char y1 = yuy2Data[i];
-        unsigned char u = yuy2Data[i + 1];
-        unsigned char y2 = yuy2Data[i + 2];
-        unsigned char v = yuy2Data[i + 3];
-
-#ifdef _WIN32
-        // Convert first pixel (Y1, U, V) to RGB
-        rgbData[rgbIndex++] = clamp(y1 + 1.772 * (u - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y1 - 0.344136 * (u - 128) - 0.714136 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y1 + 1.402 * (v - 128), 0.0, 255.0);
-
-        // Convert second pixel (Y2, U, V) to RGB
-        rgbData[rgbIndex++] = clamp(y2 + 1.772 * (u - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y2 - 0.344136 * (u - 128) - 0.714136 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y2 + 1.402 * (v - 128), 0.0, 255.0);
-#else
-        // Convert first pixel (Y1, U, V) to RGB
-        rgbData[rgbIndex++] = clamp(y1 + 1.402 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y1 - 0.344136 * (u - 128) - 0.714136 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y1 + 1.772 * (u - 128), 0.0, 255.0);
-
-        // Convert second pixel (Y2, U, V) to RGB
-        rgbData[rgbIndex++] = clamp(y2 + 1.402 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y2 - 0.344136 * (u - 128) - 0.714136 * (v - 128), 0.0, 255.0);
-        rgbData[rgbIndex++] = clamp(y2 + 1.772 * (u - 128), 0.0, 255.0);
-#endif
-    }
-}
-
 // Struct definitions
 struct CAMERA_API FrameData
 {
