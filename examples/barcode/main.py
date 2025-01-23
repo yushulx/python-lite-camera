@@ -22,7 +22,7 @@ class MyCapturedResultReceiver(CapturedResultReceiver):
 
 if __name__ == '__main__':
     errorCode, errorMsg = LicenseManager.init_license(
-        "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==")
+        "LICENSE-KEY")
     if errorCode != EnumErrorCode.EC_OK and errorCode != EnumErrorCode.EC_LICENSE_CACHE_USED:
         print("License initialization failed: ErrorCode:",
               errorCode, ", ErrorString:", errorMsg)
