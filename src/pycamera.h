@@ -120,7 +120,7 @@ static PyObject *captureFrame(PyObject *obj, PyObject *args)
     if (frame.rgbData)
     {
         PyObject *rgbData = PyByteArray_FromStringAndSize((const char *)frame.rgbData, frame.size);
-        PyObject *pyFrame = Py_BuildValue("iiiO", frame.width, frame.height, frame.size, rgbData);
+        PyObject *pyFrame = Py_BuildValue("iiiN", frame.width, frame.height, frame.size, rgbData);
         ReleaseFrame(frame);
 
         return pyFrame;
