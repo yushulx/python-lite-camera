@@ -7,50 +7,102 @@ from setuptools.command.install import install
 import shutil
 from pathlib import Path
 
-lib_dir = ''
+# Define platform-specific source files
+def get_platform_sources():
+    base_sources = [
+        "src/litecam.cpp",  # Python binding
+    ]
+    
+    # Add platform-specific camera implementation sources
+    if sys.platform == "linux" or sys.platform == "linux2":
+        # Linux
+        platform_sources = [
+            "lib/litecam/src/CameraLinux.cpp",
+            "lib/litecam/src/CameraPreviewLinux.cpp",
+        ]
+    elif sys.platform == "darwin":
+        # MacOS
+        platform_sources = [
+            "lib/litecam/src/CameraMacOS.mm",
+            "lib/litecam/src/CameraPreviewMacOS.mm",
+        ]
+    elif sys.platform == "win32":
+        # Windows
+        platform_sources = [
+            "lib/litecam/src/CameraWindows.cpp",
+            "lib/litecam/src/CameraPreviewWindows.cpp",
+        ]
+    else:
+        raise RuntimeError("Unsupported platform")
+    
+    return base_sources + platform_sources
 
-sources = [
-    "src/litecam.cpp",
-]
-
-include_dirs = [os.path.join(os.path.dirname(__file__), "include")]
-
-libraries = ['litecam']
-
-extra_compile_args = []
-
-if sys.platform == "linux" or sys.platform == "linux2":
-    # Linux
-    lib_dir = 'lib/linux'
-    extra_compile_args = ['-std=c++11']
-    extra_link_args = ["-Wl,-rpath=$ORIGIN"]
-elif sys.platform == "darwin":
-    # MacOS
-    lib_dir = 'lib/macos'
-    # extra_compile_args = ["-x objective-c++"]
-    # libraries = ["Cocoa", "AVFoundation", "CoreMedia", "CoreVideo", "objc"]
-    extra_compile_args = ['-std=c++11']
-    extra_link_args = ["-Wl,-rpath,@loader_path"]
-elif sys.platform == "win32":
-    # Windows
-    lib_dir = 'lib/windows'
+# Define platform-specific compile and link arguments
+def get_platform_config():
+    include_dirs = [
+        os.path.join(os.path.dirname(__file__), "include"),
+        os.path.join(os.path.dirname(__file__), "lib/litecam/include"),
+    ]
+    
+    libraries = []
+    library_dirs = []
+    extra_compile_args = []
     extra_link_args = []
+    define_macros = [('CAMERA_EXPORTS', None)]  # Define for building the library
+    
+    if sys.platform == "linux" or sys.platform == "linux2":
+        # Linux
+        extra_compile_args = ['-std=c++17', '-fPIC']
+        libraries = ['X11', 'pthread']
+        extra_link_args = ["-Wl,-rpath=$ORIGIN"]
+        
+    elif sys.platform == "darwin":
+        # MacOS
+        extra_compile_args = ['-std=c++17', '-x', 'objective-c++']
+        libraries = []  # Will be handled by extra_link_args
+        extra_link_args = [
+            "-framework", "Cocoa",
+            "-framework", "AVFoundation", 
+            "-framework", "CoreMedia",
+            "-framework", "CoreVideo",
+            "-lobjc",
+            "-Wl,-rpath,@loader_path"
+        ]
+        
+    elif sys.platform == "win32":
+        # Windows
+        extra_compile_args = ['/std:c++17']
+        libraries = ['ole32', 'uuid', 'mfplat', 'mf', 'mfreadwrite', 'mfuuid', 'user32', 'gdi32']
+        extra_link_args = []
+        
+    else:
+        raise RuntimeError("Unsupported platform")
+    
+    return {
+        'include_dirs': include_dirs,
+        'libraries': libraries,
+        'library_dirs': library_dirs,
+        'extra_compile_args': extra_compile_args,
+        'extra_link_args': extra_link_args,
+        'define_macros': define_macros,
+    }
 
-else:
-    raise RuntimeError("Unsupported platform")
-
+# Get platform-specific configuration
+sources = get_platform_sources()
+config = get_platform_config()
 
 long_description = io.open("README.md", encoding="utf-8").read()
 
 module_litecam = Extension(
     "litecam",
     sources=sources,
-    include_dirs=include_dirs,
-    library_dirs=[lib_dir],
-    libraries=libraries,
-    extra_compile_args=extra_compile_args,
-    extra_link_args=extra_link_args,
-    # language="c++",
+    include_dirs=config['include_dirs'],
+    library_dirs=config['library_dirs'],
+    libraries=config['libraries'],
+    extra_compile_args=config['extra_compile_args'],
+    extra_link_args=config['extra_link_args'],
+    define_macros=config['define_macros'],
+    language="c++",
 )
 
 
@@ -63,30 +115,36 @@ def copyfiles(src, dst):
     else:
         shutil.copy2(src, dst)
 
-
 class CustomBuildExt(build_ext.build_ext):
     def run(self):
         build_ext.build_ext.run(self)
+        # No need to copy external libraries since everything is built together
         dst = os.path.join(self.build_lib, "litecam")
-        copyfiles(lib_dir, dst)
+        
+        # Create destination directory if it doesn't exist
+        os.makedirs(dst, exist_ok=True)
+        
+        # Copy any additional files if needed
         filelist = os.listdir(self.build_lib)
         for file in filelist:
             filePath = os.path.join(self.build_lib, file)
-            if not os.path.isdir(file):
+            if not os.path.isdir(filePath) and file.endswith(('.pyd', '.so', '.dylib')):
                 copyfiles(filePath, dst)
                 # delete file for wheel package
                 os.remove(filePath)
-
 
 class CustomBuildExtDev(build_ext.build_ext):
     def run(self):
         build_ext.build_ext.run(self)
         dev_folder = os.path.join(Path(__file__).parent, 'litecam')
-        copyfiles(lib_dir, dev_folder)
+        
+        # Create destination directory if it doesn't exist
+        os.makedirs(dev_folder, exist_ok=True)
+        
         filelist = os.listdir(self.build_lib)
         for file in filelist:
             filePath = os.path.join(self.build_lib, file)
-            if not os.path.isdir(file):
+            if not os.path.isdir(filePath) and file.endswith(('.pyd', '.so', '.dylib')):
                 copyfiles(filePath, dev_folder)
 
 
@@ -96,7 +154,7 @@ class CustomInstall(install):
 
 
 setup(name='lite-camera',
-      version='2.0.4',
+      version='2.0.5',
       description='LiteCam is a lightweight, cross-platform library for capturing RGB frames from cameras and displaying them. Designed with simplicity and ease of integration in mind, LiteCam supports Windows, Linux and macOS platforms.',
       long_description=long_description,
       long_description_content_type="text/markdown",

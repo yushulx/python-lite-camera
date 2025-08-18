@@ -79,14 +79,18 @@ static PyObject *listMediaTypes(PyObject *obj, PyObject *args)
         }
 
 #else
-        // For Windows: Convert wide-character string to UTF-8
+        // For Linux and macOS: Use char* directly
         PyObject *pyMediaType = Py_BuildValue("{s:i,s:i,s:s}",
                                               "width", mediaType.width,
                                               "height", mediaType.height,
                                               "subtypeName", mediaType.subtypeName);
 #endif
 
-        PyList_Append(pyList, pyMediaType);
+        if (pyMediaType != NULL)
+        {
+            PyList_Append(pyList, pyMediaType);
+            Py_DECREF(pyMediaType); // Fix memory leak: decrement reference after adding to list
+        }
     }
 
     return pyList;
@@ -112,6 +116,30 @@ static PyObject *setResolution(PyObject *obj, PyObject *args)
     return Py_BuildValue("i", ret);
 }
 
+static PyObject *captureFrameInfo(PyObject *obj, PyObject *args)
+{
+    PyCamera *self = (PyCamera *)obj;
+
+    FrameData frame = self->handler->CaptureFrame();
+    if (frame.rgbData)
+    {
+        // Store frame dimensions
+        int frameWidth = frame.width;
+        int frameHeight = frame.height;
+        size_t frameSize = frame.size;
+
+        // Release the C++ frame data immediately without creating Python objects
+        ReleaseFrame(frame);
+
+        // Return just the frame info without the data
+        return Py_BuildValue("iii", frameWidth, frameHeight, frameSize);
+    }
+    else
+    {
+        Py_RETURN_NONE;
+    }
+}
+
 static PyObject *captureFrame(PyObject *obj, PyObject *args)
 {
     PyCamera *self = (PyCamera *)obj;
@@ -119,9 +147,35 @@ static PyObject *captureFrame(PyObject *obj, PyObject *args)
     FrameData frame = self->handler->CaptureFrame();
     if (frame.rgbData)
     {
-        PyObject *rgbData = PyByteArray_FromStringAndSize((const char *)frame.rgbData, frame.size);
-        PyObject *pyFrame = Py_BuildValue("iiiO", frame.width, frame.height, frame.size, rgbData);
+        // Store frame dimensions before releasing
+        int frameWidth = frame.width;
+        int frameHeight = frame.height;
+        size_t frameSize = frame.size;
+
+        // Create bytearray with a copy of the data
+        PyObject *rgbData = PyByteArray_FromStringAndSize((const char *)frame.rgbData, frameSize);
+
+        // Release the C++ frame data immediately after copying
         ReleaseFrame(frame);
+
+        if (rgbData == NULL)
+        {
+            // Handle memory allocation failure
+            return NULL;
+        }
+
+        // Build the return tuple with width, height, size, and data
+        PyObject *pyFrame = PyTuple_New(4);
+        if (pyFrame == NULL)
+        {
+            Py_DECREF(rgbData);
+            return NULL;
+        }
+
+        PyTuple_SET_ITEM(pyFrame, 0, PyLong_FromLong(frameWidth));
+        PyTuple_SET_ITEM(pyFrame, 1, PyLong_FromLong(frameHeight));
+        PyTuple_SET_ITEM(pyFrame, 2, PyLong_FromLong(frameSize));
+        PyTuple_SET_ITEM(pyFrame, 3, rgbData); // rgbData reference is stolen by tuple
 
         return pyFrame;
     }
@@ -153,6 +207,7 @@ static PyMethodDef instance_methods[] = {
     {"release", release, METH_VARARGS, NULL},
     {"setResolution", setResolution, METH_VARARGS, NULL},
     {"captureFrame", captureFrame, METH_VARARGS, NULL},
+    {"captureFrameInfo", captureFrameInfo, METH_VARARGS, NULL},
     {"getWidth", getWidth, METH_VARARGS, NULL},
     {"getHeight", getHeight, METH_VARARGS, NULL},
     {NULL, NULL, 0, NULL}};
