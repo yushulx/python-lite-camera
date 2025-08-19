@@ -21,10 +21,11 @@ def get_platform_sources():
             "lib/litecam/src/CameraPreviewLinux.cpp",
         ]
     elif sys.platform == "darwin":
-        # MacOS
+        # MacOS - use .cpp files (copied from .mm files)
+        # Note: We copy .mm to .cpp because setuptools doesn't handle .mm files
         platform_sources = [
-            "lib/litecam/src/CameraMacOS.mm",
-            "lib/litecam/src/CameraPreviewMacOS.mm",
+            "lib/litecam/src/CameraMacOS.cpp",
+            "lib/litecam/src/CameraPreviewMacOS.cpp",
         ]
     elif sys.platform == "win32":
         # Windows
@@ -58,7 +59,7 @@ def get_platform_config():
         
     elif sys.platform == "darwin":
         # MacOS
-        extra_compile_args = ['-std=c++17', '-x', 'objective-c++']
+        extra_compile_args = ['-std=c++17', '-ObjC++']
         libraries = []  # Will be handled by extra_link_args
         extra_link_args = [
             "-framework", "Cocoa",
@@ -86,6 +87,23 @@ def get_platform_config():
         'extra_link_args': extra_link_args,
         'define_macros': define_macros,
     }
+
+# Ensure .mm files are copied to .cpp files before building (macOS only)
+if sys.platform == "darwin":
+    mm_files = [
+        "lib/litecam/src/CameraMacOS.mm",
+        "lib/litecam/src/CameraPreviewMacOS.mm",
+    ]
+    
+    for mm_file in mm_files:
+        cpp_file = mm_file.replace('.mm', '.cpp')
+        
+        # Always copy .mm to .cpp to ensure they're up to date
+        if os.path.exists(mm_file):
+            print(f"Copying {mm_file} to {cpp_file}")
+            shutil.copy2(mm_file, cpp_file)
+        else:
+            raise RuntimeError(f"Required source file {mm_file} not found")
 
 # Get platform-specific configuration
 sources = get_platform_sources()
@@ -125,13 +143,14 @@ class CustomBuildExt(build_ext.build_ext):
         os.makedirs(dst, exist_ok=True)
         
         # Copy any additional files if needed
-        filelist = os.listdir(self.build_lib)
-        for file in filelist:
-            filePath = os.path.join(self.build_lib, file)
-            if not os.path.isdir(filePath) and file.endswith(('.pyd', '.so', '.dylib')):
-                copyfiles(filePath, dst)
-                # delete file for wheel package
-                os.remove(filePath)
+        if os.path.exists(self.build_lib):
+            filelist = os.listdir(self.build_lib)
+            for file in filelist:
+                filePath = os.path.join(self.build_lib, file)
+                if not os.path.isdir(filePath) and file.endswith(('.pyd', '.so', '.dylib')):
+                    copyfiles(filePath, dst)
+                    # delete file for wheel package
+                    os.remove(filePath)
 
 class CustomBuildExtDev(build_ext.build_ext):
     def run(self):
@@ -154,7 +173,7 @@ class CustomInstall(install):
 
 
 setup(name='lite-camera',
-      version='2.0.5',
+      version='2.0.6',
       description='LiteCam is a lightweight, cross-platform library for capturing RGB frames from cameras and displaying them. Designed with simplicity and ease of integration in mind, LiteCam supports Windows, Linux and macOS platforms.',
       long_description=long_description,
       long_description_content_type="text/markdown",
