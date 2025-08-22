@@ -117,6 +117,12 @@ void Camera::ShutdownMediaFoundation()
 {
     if (initialized)
     {
+        if (ms)
+        {
+            ms->Shutdown();
+            ms.Reset();
+        }
+
         MFShutdown();
         initialized = false;
     }
@@ -164,6 +170,8 @@ bool Camera::Open(int cameraIndex)
     if (FAILED(hr))
         return false;
 
+    this->ms = mediaSource;
+
     ComPtr<IMFSourceReader> mfReader;
     hr = MFCreateSourceReaderFromMediaSource(mediaSource.Get(), nullptr, &mfReader);
     if (FAILED(hr))
@@ -200,6 +208,8 @@ void Camera::Release()
     {
         ComPtr<IMFSourceReader> mfReader(static_cast<IMFSourceReader *>(reader));
         reader = nullptr;
+
+        ShutdownMediaFoundation();
     }
 }
 

@@ -8,11 +8,7 @@
 
 // Export macro for shared library
 #ifdef _WIN32
-#ifdef CAMERA_EXPORTS
-#define CAMERA_API __declspec(dllexport)
-#else
-#define CAMERA_API __declspec(dllimport)
-#endif
+#define CAMERA_API
 #elif defined(__linux__) || defined(__APPLE__)
 #define CAMERA_API __attribute__((visibility("default")))
 #else
@@ -29,6 +25,7 @@
 #include <wrl/client.h>
 #include <dshow.h>
 
+using Microsoft::WRL::ComPtr;
 #elif __linux__
 #include <linux/videodev2.h>
 #include <fcntl.h>
@@ -106,7 +103,7 @@ public:
 private:
 #ifdef _WIN32
     void *reader;
-
+    ComPtr<IMFMediaSource> ms;
     bool initialized;
     void InitializeMediaFoundation();
     void ShutdownMediaFoundation();
