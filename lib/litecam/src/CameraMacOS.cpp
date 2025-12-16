@@ -13,7 +13,7 @@
 }
 
 - (instancetype)initWithFrame:(FrameData *)frame
-                    frameMutex:(std::mutex *)frameMutex
+                   frameMutex:(std::mutex *)frameMutex
                frameCondition:(std::condition_variable *)frameCondition
                    frameReady:(bool *)frameReady;
 
@@ -22,11 +22,13 @@
 @implementation CaptureDelegate
 
 - (instancetype)initWithFrame:(FrameData *)frame
-                    frameMutex:(std::mutex *)frameMutex
+                   frameMutex:(std::mutex *)frameMutex
                frameCondition:(std::condition_variable *)frameCondition
-                   frameReady:(bool *)frameReady {
+                   frameReady:(bool *)frameReady
+{
     self = [super init];
-    if (self) {
+    if (self)
+    {
         self->frame = frame;
         self->frameMutex = frameMutex;
         self->frameCondition = frameCondition;
@@ -36,10 +38,12 @@
 }
 
 - (void)captureOutput:(AVCaptureOutput *)output
- didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
-        fromConnection:(AVCaptureConnection *)connection {
+    didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
+           fromConnection:(AVCaptureConnection *)connection
+{
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    if (!imageBuffer) {
+    if (!imageBuffer)
+    {
         std::cerr << "Failed to get image buffer." << std::endl;
         return;
     }
@@ -60,12 +64,15 @@
         frame->rgbData = new unsigned char[frame->size];
 
         OSType pixelFormat = CVPixelBufferGetPixelFormatType(imageBuffer);
-        if (pixelFormat == kCVPixelFormatType_32BGRA) {
+        if (pixelFormat == kCVPixelFormatType_32BGRA)
+        {
             unsigned char *src = (unsigned char *)baseAddress;
             unsigned char *dst = frame->rgbData;
 
-            for (size_t y = 0; y < height; ++y) {
-                for (size_t x = 0; x < width; ++x) {
+            for (size_t y = 0; y < height; ++y)
+            {
+                for (size_t x = 0; x < width; ++x)
+                {
                     size_t offset = y * bytesPerRow + x * 4;
                     dst[0] = src[offset + 2]; // R
                     dst[1] = src[offset + 1]; // G
@@ -73,7 +80,9 @@
                     dst += 3;
                 }
             }
-        } else {
+        }
+        else
+        {
             std::cerr << "Unsupported pixel format." << std::endl;
         }
 
@@ -85,11 +94,10 @@
     CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
 }
 
-
 @end
 
 // Camera class implementation for macOS
-Camera::Camera() noexcept: captureSession(nullptr), frameWidth(1920), frameHeight(1080) {}
+Camera::Camera() noexcept : captureSession(nullptr), frameWidth(1920), frameHeight(1080) {}
 
 Camera::~Camera()
 {
@@ -98,7 +106,8 @@ Camera::~Camera()
 
 bool Camera::Open(int cameraIndex)
 {
-    @autoreleasepool {
+    @autoreleasepool
+    {
         // Get available capture devices
         NSArray<AVCaptureDevice *> *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
         if (cameraIndex >= [devices count])
@@ -128,7 +137,7 @@ bool Camera::Open(int cameraIndex)
 
         // Configure output
         AVCaptureVideoDataOutput *output = [[AVCaptureVideoDataOutput alloc] init];
-        output.videoSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+        output.videoSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA)};
         output.alwaysDiscardsLateVideoFrames = YES;
 
         videoOutput = (__bridge void *)output;
@@ -146,26 +155,32 @@ bool Camera::Open(int cameraIndex)
     }
 }
 
-void Camera::Release() {
-    if (captureSession) {
+void Camera::Release()
+{
+    if (captureSession)
+    {
         AVCaptureSession *session = (__bridge AVCaptureSession *)captureSession;
         [session stopRunning];
         captureSession = nullptr;
     }
 
-    if (videoOutput) {
+    if (videoOutput)
+    {
         videoOutput = nullptr;
     }
 }
 
-FrameData Camera::CaptureFrame() {
+FrameData Camera::CaptureFrame()
+{
     static FrameData frame;
     static std::mutex frameMutex;
     static std::condition_variable frameCondition;
     static bool frameReady = false;
 
-    @autoreleasepool {
-        if (!captureSession || !videoOutput) {
+    @autoreleasepool
+    {
+        if (!captureSession || !videoOutput)
+        {
             std::cerr << "Capture session is not initialized." << std::endl;
             return frame;
         }
@@ -175,12 +190,13 @@ FrameData Camera::CaptureFrame() {
 
         CaptureDelegate *delegate = [[CaptureDelegate alloc] initWithFrame:&frame
                                                                 frameMutex:&frameMutex
-                                                           frameCondition:&frameCondition
-                                                               frameReady:&frameReady];
+                                                            frameCondition:&frameCondition
+                                                                frameReady:&frameReady];
         [output setSampleBufferDelegate:delegate queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)];
 
         std::unique_lock<std::mutex> lock(frameMutex);
-        frameCondition.wait(lock, [&]() { return frameReady; });
+        frameCondition.wait(lock, [&]()
+                            { return frameReady; });
         frameReady = false;
         frameWidth = frame.width;
         frameHeight = frame.height;
@@ -241,10 +257,10 @@ bool Camera::SetResolution(int width, int height)
     return true;
 }
 
-
 std::vector<CaptureDeviceInfo> ListCaptureDevices()
 {
-    @autoreleasepool {
+    @autoreleasepool
+    {
         std::vector<CaptureDeviceInfo> devicesInfo;
 
         NSArray<AVCaptureDevice *> *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
@@ -279,7 +295,7 @@ std::vector<MediaTypeInfo> Camera::ListSupportedMediaTypes()
     else
     {
         std::cerr << "Error: First input is not an AVCaptureDeviceInput." << std::endl;
-        return mediaTypes; 
+        return mediaTypes;
     }
 
     AVCaptureDevice *device = input.device;
@@ -311,7 +327,6 @@ std::vector<MediaTypeInfo> Camera::ListSupportedMediaTypes()
     return mediaTypes;
 }
 
-
 void ReleaseFrame(FrameData &frame)
 {
     if (frame.rgbData)
@@ -321,22 +336,3 @@ void ReleaseFrame(FrameData &frame)
         frame.size = 0;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Save a frame as a JPEG image using the STB library
-// https://github.com/nothings/stb/blob/master/stb_image_write.h
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-void saveFrameAsJPEG(const unsigned char *data, int width, int height, const std::string &filename)
-{
-    // Simple image saving using STB library or another JPEG encoding method
-    if (stbi_write_jpg(filename.c_str(), width, height, 3, data, 90))
-    {
-        std::cout << "Saved frame to " << filename << std::endl;
-    }
-    else
-    {
-        std::cerr << "Error saving frame as JPEG." << std::endl;
-    }
-}
-///////////////////////////////////////////////////////////////////////////////

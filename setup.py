@@ -173,7 +173,7 @@ class CustomInstall(install):
 
 
 setup(name='lite-camera',
-      version='2.0.7',
+      version='2.0.8',
       description='LiteCam is a lightweight, cross-platform library for capturing RGB frames from cameras and displaying them. Designed with simplicity and ease of integration in mind, LiteCam supports Windows, Linux and macOS platforms.',
       long_description=long_description,
       long_description_content_type="text/markdown",

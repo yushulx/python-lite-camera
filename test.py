@@ -21,6 +21,27 @@ if camera.open(0):
             filename = str(i) + ".jpg"
             litecam.saveJpeg(filename, width, height, data)
 
+            filename_png = str(i) + ".png"
+            litecam.savePng(filename_png, width, height, data)
+
+            # Test saveJpegInMemory
+            jpeg_data = litecam.saveJpegInMemory(width, height, data)
+            if isinstance(jpeg_data, bytes):
+                print(f"Captured JPEG data in memory, size: {len(jpeg_data)} bytes")
+                with open(f"memory_{i}.jpg", "wb") as f:
+                    f.write(jpeg_data)
+            else:
+                print("Failed to capture JPEG data in memory")
+
+            # Test savePngInMemory
+            png_data = litecam.savePngInMemory(width, height, data)
+            if isinstance(png_data, bytes):
+                print(f"Captured PNG data in memory, size: {len(png_data)} bytes")
+                with open(f"memory_{i}.png", "wb") as f:
+                    f.write(png_data)
+            else:
+                print("Failed to capture PNG data in memory")
+
         time.sleep(1)
 
     window = litecam.PyWindow(

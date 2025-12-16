@@ -65,6 +65,9 @@ if camera.open(0):
 
 - **getDeviceList()**: Lists available video capture devices.
 - **saveJpeg(filename, width, height, rgbdata)**: Saves the frame as a JPEG image.
+- **savePng(filename, width, height, rgbdata)**: Saves the frame as a PNG image.
+- **saveJpegInMemory(width, height, rgbdata)**: Saves the frame as a JPEG image in memory.
+- **savePngInMemory(width, height, rgbdata)**: Saves the frame as a PNG image in memory.
 
 #### PyCamera
 - **open(index)**: Opens the camera with the specified index.

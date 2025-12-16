@@ -496,22 +496,3 @@ void ReleaseFrame(FrameData &frame)
         frame.size = 0;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Save a frame as a JPEG image using the STB library
-// https://github.com/nothings/stb/blob/master/stb_image_write.h
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-void saveFrameAsJPEG(const unsigned char *data, int width, int height, const std::string &filename)
-{
-    // Simple image saving using STB library or another JPEG encoding method
-    if (stbi_write_jpg(filename.c_str(), width, height, 3, data, 90))
-    {
-        std::cout << "Saved frame to " << filename << std::endl;
-    }
-    else
-    {
-        std::cerr << "Error saving frame as JPEG." << std::endl;
-    }
-}
-///////////////////////////////////////////////////////////////////////////////

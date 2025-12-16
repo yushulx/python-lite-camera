@@ -73,7 +73,6 @@ struct CAMERA_API CaptureDeviceInfo
 // Exported functions
 CAMERA_API std::vector<CaptureDeviceInfo> ListCaptureDevices();
 CAMERA_API void ReleaseFrame(FrameData &frame);
-CAMERA_API void saveFrameAsJPEG(const unsigned char *data, int width, int height, const std::string &filename);
 
 // Camera class
 class CAMERA_API Camera
